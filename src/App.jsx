@@ -294,6 +294,23 @@ function NexusLogo() {
 --------------------------*/
 export default function App() {
   const DEV_MODE = import.meta?.env?.DEV === true;
+  const [deferredPrompt, setDeferredPrompt] = useState(null);
+  const [canInstall, setCanInstall] = useState(false);
+
+  useEffect(() => {
+    const handler = (e) => {
+      e.preventDefault();
+      setDeferredPrompt(e);
+      setCanInstall(true);
+    };
+    window.addEventListener("beforeinstallprompt", handler);
+    return () => window.removeEventListener("beforeinstallprompt", handler);
+  }, []);
+
+  async function installApp() {
+    if (!deferredPrompt) return;
+    deferredPrompt.prompt();
+  }
 
   
   // Health label (UX): translates score into a simple status (educational, not a trade signal)
@@ -2191,10 +2208,17 @@ ${JSON.stringify(context)}`);
             </div>
 
             <div className="row" style={{ gap: 10, marginTop: 14, justifyContent: "flex-end", flexWrap: "wrap" }}>
-              <button className="modeBtn" onClick={acceptTerms} disabled={!termsChecked}>
-                Accept & Continue
+             <button className="modeBtn" onClick={acceptTerms} disabled={!termsChecked}>
+               Accept & Continue
+             </button>
+
+             {canInstall && (
+              <button className="modeBtn" onClick={installApp}>
+                 Install App
               </button>
-            </div>
+            )}
+          </div>
+
           </div>
         </div>
       ) : null}
