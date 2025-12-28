@@ -316,10 +316,9 @@ export default function App() {
     }
   });
   useEffect(() => {
-    if (termsOpen) return; // noch nicht akzeptiert -> KEIN PWA
+    registerSW({ immediate: true }); // ✅ immer registrieren, sonst kein App-Icon auf Android
+  }, []);
 
-    registerSW({ immediate: true });
-  }, [termsOpen]);
 
 
   const [termsChecked, setTermsChecked] = useState(false);
