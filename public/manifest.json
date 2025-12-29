@@ -1,10 +1,11 @@
 {
   "name": "Nexus Analyt",
   "short_name": "Nexus",
+  "description": "Grid + Watchlist + Health (Educational)",
   "start_url": "/",
   "display": "standalone",
-  "background_color": "#0b1f1a",
-  "theme_color": "#0b1f1a",
+  "background_color": "#041215",
+  "theme_color": "#041215",
   "icons": [
     {
       "src": "/pwa-192.png",
