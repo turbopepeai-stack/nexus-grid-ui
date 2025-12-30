@@ -1,5 +1,4 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
-console.log("WC PID:", import.meta.env.VITE_WALLETCONNECT_PROJECT_ID);
 import { registerSW } from "virtual:pwa-register";
 
 /**
@@ -463,6 +462,10 @@ function ResolverChart({ seriesById, ids, height = 220 }) {
 }
 
 export default function App() {
+  // Debug: show WalletConnect project id (safe in prod)
+  useEffect(() => {
+    try { console.log("WC PID:", import.meta.env.VITE_WALLETCONNECT_PROJECT_ID); } catch (e) {}
+  }, []);
   const DEV_MODE = import.meta?.env?.DEV === true;
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
