@@ -1,7 +1,6 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
 import { registerSW } from "virtual:pwa-register";
 
-
 /**
  * Nexus Analyt — Grid + Watchlist + Health
  * (Single file App.jsx)
@@ -469,6 +468,15 @@ export default function App() {
 const [helpKey, setHelpKey] = useState(null);
   const [helpOpen, setHelpOpen] = useState(false);
   const uiLang = useMemo(() => detectLang(), []);
+
+
+  // Debug (safe): log WalletConnect project id only in DEV
+  useEffect(() => {
+    if (import.meta?.env?.DEV) {
+      // eslint-disable-next-line no-console
+      console.log("WC PID:", import.meta?.env?.VITE_WALLETCONNECT_PROJECT_ID);
+    }
+  }, []);
 
   const openHelp = (key) => { setHelpKey(key); setHelpOpen(true); };
   const helpContent = useMemo(() => {
@@ -1810,7 +1818,6 @@ async function refreshSelectedHealthNow() {
       setGridMeta({
         tick: r?.tick || 0,
         pnl: r?.pnl || null,
-        pnl: r?.pnl || null,
         price: r?.price || livePrice,
         price_source: livePrice != null ? "frontend" : "snapshot",
         filled_now: 0,
@@ -1991,7 +1998,7 @@ async function addManualOrder() {
   // - Quick Buttons: medium length, NO prices, NO % values, NO trade levels, NO invented metrics/scores.
   // - Ask AI: can be longer, but MUST stay strictly within provided context data (no hallucinations).
   // - Language: Quick Buttons follow the last Ask AI input language (default EN). Ask AI follows the current input language.
-  function detectLang(s) {
+  function detectLangFromText(s) {
     const t = String(s || "").trim();
     if (!t) return "en";
     // lightweight heuristic: if it contains common German words/umlauts → de
@@ -2033,7 +2040,7 @@ async function addManualOrder() {
     // Language rules:
     // - Ask AI uses the language of the current input
     // - Quick Buttons use the last Ask AI input language (default EN)
-    const askLangNow = detectLang(userQ);
+    const askLangNow = detectLangFromText(userQ);
     const outLang = kind === "General" ? askLangNow : (lastAskLang || "en");
 
     // Update lastAskLang ONLY when user clicks Ask AI (General)
@@ -3494,6 +3501,7 @@ ${JSON.stringify(context)}`);
           padding:10px 12px;
           outline:none;
           box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+        }
 
         .select{
           width:100%;
