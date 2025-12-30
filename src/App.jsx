@@ -52,6 +52,7 @@ function getDisclaimerAccepted() {
 const LS_RESOLVER_PRIMARY = "na_resolver_primary";
 const LS_RESOLVER_PAIR = "na_resolver_pair";
 const LS_RESOLVER_COMPARE = "na_resolver_compare";
+const LS_RESOLVER_COMPARE_SET = "na_resolver_compare_set_v1";
 const LS_WATCHLIST = "na_watchlist";
 const LS_SYMBOL_MAP = "na_symbol_map";
 const LS_CG_MAP = "na_cg_map";
@@ -362,6 +363,25 @@ export default function App() {
   const [compareItemId, setCompareItemId] = useState(
     () => localStorage.getItem(LS_RESOLVER_COMPARE) || ""
   );
+
+  const [resolverCompareSet, setResolverCompareSet] = useState(() => {
+    try {
+      const raw = localStorage.getItem(LS_RESOLVER_COMPARE_SET);
+      const arr = JSON.parse(raw || "[]");
+      return Array.isArray(arr) ? arr.slice(0, 20) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        LS_RESOLVER_COMPARE_SET,
+        JSON.stringify((resolverCompareSet || []).slice(0, 20))
+      );
+    } catch {}
+  }, [resolverCompareSet]);
 
   // -------------------------
   // WalletConnect + Auth (Backend nonce/sign)
@@ -2122,6 +2142,11 @@ ${JSON.stringify(context)}`);
       <div className="topbar">
         <NexusLogo />
         <div className="statusRow">
+          {canInstall && (
+            <button className="smallBtn" onClick={installApp} title="Install Nexus Analyt">
+              Install
+            </button>
+          )}
           {DEV_MODE && (
             <>
           <Badge ok={busy ? null : true}>{busy ? "busy" : "ready"}</Badge>
@@ -2258,6 +2283,53 @@ ${JSON.stringify(context)}`);
               onChange={(e) => setCompareItemId(e.target.value)}
               placeholder="e.g. BTC or polygon_tbp_weth_sush"
             />
+          </div>
+
+          <div className="field">
+            <div className="label">Compare set (select up to 20 from watchlist)</div>
+            <div className="pillRow" style={{ gap: 8 }}>
+              {(watchlist || []).map((sym) => {
+                const checked = (resolverCompareSet || []).includes(sym);
+                const disabled = !checked && (resolverCompareSet || []).length >= 20;
+                return (
+                  <label
+                    key={sym}
+                    className="pill"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      opacity: disabled ? 0.55 : 1,
+                      cursor: disabled ? "not-allowed" : "pointer",
+                    }}
+                    title={disabled ? "Max 20 selected" : "Toggle compare"}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => {
+                        setResolverCompareSet((prev) => {
+                          const arr = Array.isArray(prev) ? [...prev] : [];
+                          const i = arr.indexOf(sym);
+                          if (i >= 0) {
+                            arr.splice(i, 1);
+                            return arr;
+                          }
+                          if (arr.length >= 20) return arr;
+                          arr.push(sym);
+                          return arr;
+                        });
+                      }}
+                    />
+                    <span className="mono">{sym}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="hint muted" style={{ marginTop: 8 }}>
+              Tip: Select coins here, then the resolver/AI can compare them quickly. (Charts over days need a history endpoint.)
+            </div>
           </div>
         </Card>
 
@@ -3205,6 +3277,7 @@ ${JSON.stringify(context)}`);
           padding:10px 12px;
           outline:none;
           box-shadow: inset 0 0 0 1px rgba(0,0,0,.15);
+        }
 
         .select{
           width:100%;
@@ -3321,6 +3394,20 @@ ${JSON.stringify(context)}`);
           transition: transform .08s ease, border-color .12s ease, background .12s ease;
         }
         .segBtn{padding:8px 12px;font-size:12px;}
+
+        .smallBtn{
+          border-radius:999px;
+          border:1px solid rgba(97,255,194,.22);
+          background:rgba(8,16,14,.55);
+          color:rgba(230,255,244,.92);
+          padding:8px 12px;
+          cursor:pointer;
+          font-size:12px;
+          line-height:1;
+          transition: transform .08s ease, border-color .12s ease, background .12s ease;
+        }
+        .smallBtn:hover{transform: translateY(-1px); border-color: rgba(97,255,194,.45); background: rgba(8,16,14,.7);}
+
         .btn:hover, .modeBtn:hover, .segBtn:hover{transform: translateY(-1px);border-color:rgba(97,255,194,.35);}
         .btn:disabled, .modeBtn:disabled, .segBtn:disabled{opacity:.55;cursor:not-allowed;transform:none;}
         
