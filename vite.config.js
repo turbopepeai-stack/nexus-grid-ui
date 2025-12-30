@@ -18,12 +18,12 @@ export default defineConfig({
         theme_color: "#0b0f1a",
         icons: [
           {
-            src: "/public/pwa-192.png",
+            src: "/pwa-192.png",
             sizes: "192x192",
             type: "image/png"
           },
           {
-            src: "/public/pwa-512.png",
+            src: "/pwa-512.png",
             sizes: "512x512",
             type: "image/png"
           }
