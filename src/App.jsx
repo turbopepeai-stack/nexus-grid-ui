@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useRef, useState } from "react";
+console.log("WC PID:", import.meta.env.VITE_WALLETCONNECT_PROJECT_ID);
 import { registerSW } from "virtual:pwa-register";
 
 /**
@@ -292,200 +293,10 @@ function NexusLogo() {
 /* -------------------------
    App
 --------------------------*/
-
-/* =========================
-   Help texts (DE/EN) + modal
-   ========================= */
-const HELP_TEXTS = {
-  resolver_primary: {
-    de: {
-      title: "Primary item id",
-      body:
-        "Der Haupt‑Coin/Market, auf den sich Resolver, Live‑Preis und Grid beziehen.\n\nTipp: Nutze ein Symbol wie BTC/ETH oder (falls du es nutzt) eine Pool/Pair‑ID."
-    },
-    en: {
-      title: "Primary item id",
-      body:
-        "The main coin/market Resolver, Live Price and Grid are based on.\n\nTip: Use a symbol like BTC/ETH or (if you use it) a pool/pair id."
-    }
-  },
-  resolver_compare: {
-    de: { title: "Compare item (A vs B)", body: "Optionaler Vergleichs‑Coin. Wird für A-vs-B Kennzahlen/Anzeige genutzt." },
-    en: { title: "Compare item (A vs B)", body: "Optional compare coin used for A-vs-B metrics/preview." }
-  },
-  resolver_compare_set: {
-    de: {
-      title: "Compare set",
-      body:
-        "Wähle bis zu 20 Coins aus der Watchlist aus. Diese werden im Resolver automatisch miteinander verglichen.\n\nDu kannst Zeitraum (7/30/90 Tage) wählen – ideal um zu entscheiden, welcher Coin für den Grid am besten passt."
-    },
-    en: {
-      title: "Compare set",
-      body:
-        "Select up to 20 coins from the watchlist. Resolver will compare them automatically.\n\nPick a range (7/30/90 days) to decide which coin fits the grid best."
-    }
-  },
-  grid_coin: {
-    de: { title: "Coin", body: "Coin, auf dem der Grid läuft (Simulation/Monitoring). Wird aus Resolver/Watchlist gewählt." },
-    en: { title: "Coin", body: "The coin the grid runs on (simulation/monitoring). Usually selected from Resolver/Watchlist." }
-  },
-  grid_mode: {
-    de: { title: "Mode", body: "AUTO = Grid‑Orders werden automatisch erstellt. MANUAL = du legst Orders manuell an." },
-    en: { title: "Mode", body: "AUTO builds grid orders automatically. MANUAL lets you create orders yourself." }
-  },
-  grid_demo_usd: {
-    de: { title: "Demo investment (USD)", body: "Simuliertes Start‑Kapital für PnL/ROI Berechnung. Kein echtes Geld." },
-    en: { title: "Demo investment (USD)", body: "Simulated starting capital for PnL/ROI. Not real money." }
-  },
-  watchlist_add: {
-    de: { title: "Watchlist – Add symbol", body: "Füge Symbole hinzu (z.B. BTC, ETH, SOL, TBP). Diese erscheinen in Watchlist & Resolver." },
-    en: { title: "Watchlist – Add symbol", body: "Add symbols (e.g., BTC, ETH, SOL, TBP). They appear in Watchlist & Resolver." }
-  }
-};
-
-function detectLang() {
-  try {
-    const l = (navigator.language || "en").toLowerCase();
-    return l.startsWith("de") ? "de" : "en";
-  } catch {
-    return "en";
-  }
-}
-
-function HelpModal({ open, onClose, content }) {
-  if (!open || !content) return null;
-  return (
-    <div
-      className="modalBackdrop"
-      onClick={onClose}
-      role="dialog"
-      aria-modal="true"
-      aria-label={content.title}
-    >
-      <div className="modalCard" onClick={(e) => e.stopPropagation()}>
-        <div className="modalTitleRow">
-          <div className="modalTitle">{content.title}</div>
-          <button className="modeBtn" onClick={onClose} aria-label="Close">
-            ✕
-          </button>
-        </div>
-        <div className="modalBody mono" style={{ whiteSpace: "pre-wrap" }}>
-          {content.body}
-        </div>
-      </div>
-    </div>
-  );
-}
-
-function InfoIcon({ onClick, title = "Info" }) {
-  return (
-    <button
-      type="button"
-      className="infoIcon"
-      onClick={onClick}
-      aria-label={title}
-      title={title}
-    >
-      i
-    </button>
-  );
-}
-
-function LabelWithHelp({ text, helpKey, onHelp }) {
-  return (
-    <div className="labelRow">
-      <div className="label">{text}</div>
-      {helpKey ? <InfoIcon onClick={() => onHelp(helpKey)} /> : null}
-    </div>
-  );
-}
-
-/* =========================
-   Simple SVG chart (no deps)
-   ========================= */
-function ResolverChart({ seriesById, ids, height = 220 }) {
-  const pad = 14;
-  const w = 1000;
-  const h = height;
-  const all = [];
-  ids.forEach((id) => {
-    const s = seriesById?.[id];
-    if (Array.isArray(s)) s.forEach((p) => all.push(p));
-  });
-  if (!all.length) return null;
-
-  // normalize to % from start (100 at start) for comparability
-  const norm = {};
-  ids.forEach((id) => {
-    const s = seriesById?.[id];
-    if (!Array.isArray(s) || s.length < 2) return;
-    const base = Number(s[0][1]) || 0;
-    if (!base) return;
-    norm[id] = s.map(([t, v]) => [t, (Number(v) / base) * 100]);
-  });
-
-  const ys = [];
-  Object.values(norm).forEach((s) => s.forEach((p) => ys.push(p[1])));
-  if (!ys.length) return null;
-
-  const yMin = Math.min(...ys);
-  const yMax = Math.max(...ys);
-  const xMin = Math.min(...all.map((p) => p[0]));
-  const xMax = Math.max(...all.map((p) => p[0]));
-
-  const sx = (x) => pad + ((x - xMin) / (xMax - xMin || 1)) * (w - pad * 2);
-  const sy = (y) => pad + ((yMax - y) / (yMax - yMin || 1)) * (h - pad * 2);
-
-  const mkPath = (s) =>
-    s
-      .map(([t, v], i) => `${i === 0 ? "M" : "L"} ${sx(t).toFixed(2)} ${sy(v).toFixed(2)}`)
-      .join(" ");
-
-  return (
-    <div className="resolverChart">
-      <svg viewBox={`0 0 ${w} ${h}`} width="100%" height={h} aria-label="Resolver chart">
-        {/* grid */}
-        <g opacity="0.35">
-          {[0.2, 0.4, 0.6, 0.8].map((p) => (
-            <line key={p} x1={pad} x2={w - pad} y1={pad + (h - pad * 2) * p} y2={pad + (h - pad * 2) * p} stroke="currentColor" />
-          ))}
-        </g>
-        {Object.entries(norm).map(([id, s]) => (
-          <path key={id} d={mkPath(s)} fill="none" stroke="currentColor" strokeWidth="2" opacity="0.9" />
-        ))}
-      </svg>
-      <div className="muted" style={{ marginTop: 8, fontSize: 12 }}>
-        Normalized to 100 at start (so you can compare performance).
-      </div>
-    </div>
-  );
-}
-
 export default function App() {
   const DEV_MODE = import.meta?.env?.DEV === true;
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
-const [helpKey, setHelpKey] = useState(null);
-  const [helpOpen, setHelpOpen] = useState(false);
-  const uiLang = useMemo(() => detectLang(), []);
-
-
-  // Debug (safe): log WalletConnect project id only in DEV
-  useEffect(() => {
-    if (import.meta?.env?.DEV) {
-      // eslint-disable-next-line no-console
-      console.log("WC PID:", import.meta?.env?.VITE_WALLETCONNECT_PROJECT_ID);
-    }
-  }, []);
-
-  const openHelp = (key) => { setHelpKey(key); setHelpOpen(true); };
-  const helpContent = useMemo(() => {
-    if (!helpKey) return null;
-    const item = HELP_TEXTS[helpKey];
-    if (!item) return null;
-    return item[uiLang] || item.en;
-  }, [helpKey, uiLang]);
-
 
   useEffect(() => {
     const handler = (e) => {
@@ -553,51 +364,24 @@ const [helpKey, setHelpKey] = useState(null);
     () => localStorage.getItem(LS_RESOLVER_COMPARE) || ""
   );
 
-const [resolverCompareSet, setResolverCompareSet] = useState(() => {
-  const stored = loadJson(LS_RESOLVER_COMPARE_SET, []);
-  const arr = Array.isArray(stored) ? stored : [];
-  return arr.map((x) => String(x).trim().toUpperCase()).filter(Boolean).slice(0, 20);
-});
-const [resolverDays, setResolverDays] = useState(30);
-const [resolverHist, setResolverHist] = useState(null);
-const [resolverHistErr, setResolverHistErr] = useState("");
-const [resolverHistLoading, setResolverHistLoading] = useState(false);
-
-useEffect(() => {
-  try { localStorage.setItem(LS_RESOLVER_COMPARE_SET, JSON.stringify(resolverCompareSet)); } catch {}
-}, [resolverCompareSet]);
-
-// Fetch history for chart (uses backend cache endpoint)
-useEffect(() => {
-  const ids = (resolverCompareSet || []).slice(0, 20);
-  if (!ids.length) { setResolverHist(null); setResolverHistErr(""); return; }
-
-  let alive = true;
-  (async () => {
-    setResolverHistLoading(true);
-    setResolverHistErr("");
+  const [resolverCompareSet, setResolverCompareSet] = useState(() => {
     try {
-      const data = await fetchJsonWithTimeout(API_BASE + "/api/resolver/history", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: ids.map((s) => (symbolMap?.[s]?.cg_id ? symbolMap[s].cg_id : s.toLowerCase())), days: resolverDays })
-      }, 25000);
-      if (!alive) return;
-
-      // Map back to symbols where possible (best-effort)
-      const series = data && data.series ? data.series : {};
-      setResolverHist({ days: data.days || resolverDays, series });
-    } catch (e) {
-      if (!alive) return;
-      setResolverHist(null);
-      setResolverHistErr(e?.message || "History fetch failed");
-    } finally {
-      if (alive) setResolverHistLoading(false);
+      const raw = localStorage.getItem(LS_RESOLVER_COMPARE_SET);
+      const arr = JSON.parse(raw || "[]");
+      return Array.isArray(arr) ? arr.slice(0, 20) : [];
+    } catch {
+      return [];
     }
-  })();
+  });
 
-  return () => { alive = false; };
-}, [resolverCompareSet, resolverDays, symbolMap]);
+  useEffect(() => {
+    try {
+      localStorage.setItem(
+        LS_RESOLVER_COMPARE_SET,
+        JSON.stringify((resolverCompareSet || []).slice(0, 20))
+      );
+    } catch {}
+  }, [resolverCompareSet]);
 
   // -------------------------
   // WalletConnect + Auth (Backend nonce/sign)
@@ -1818,6 +1602,7 @@ async function refreshSelectedHealthNow() {
       setGridMeta({
         tick: r?.tick || 0,
         pnl: r?.pnl || null,
+        pnl: r?.pnl || null,
         price: r?.price || livePrice,
         price_source: livePrice != null ? "frontend" : "snapshot",
         filled_now: 0,
@@ -1998,7 +1783,7 @@ async function addManualOrder() {
   // - Quick Buttons: medium length, NO prices, NO % values, NO trade levels, NO invented metrics/scores.
   // - Ask AI: can be longer, but MUST stay strictly within provided context data (no hallucinations).
   // - Language: Quick Buttons follow the last Ask AI input language (default EN). Ask AI follows the current input language.
-  function detectLangFromText(s) {
+  function detectLang(s) {
     const t = String(s || "").trim();
     if (!t) return "en";
     // lightweight heuristic: if it contains common German words/umlauts → de
@@ -2040,7 +1825,7 @@ async function addManualOrder() {
     // Language rules:
     // - Ask AI uses the language of the current input
     // - Quick Buttons use the last Ask AI input language (default EN)
-    const askLangNow = detectLangFromText(userQ);
+    const askLangNow = detectLang(userQ);
     const outLang = kind === "General" ? askLangNow : (lastAskLang || "en");
 
     // Update lastAskLang ONLY when user clicks Ask AI (General)
@@ -2357,6 +2142,11 @@ ${JSON.stringify(context)}`);
       <div className="topbar">
         <NexusLogo />
         <div className="statusRow">
+          {canInstall && (
+            <button className="smallBtn" onClick={installApp} title="Install Nexus Analyt">
+              Install
+            </button>
+          )}
           {DEV_MODE && (
             <>
           <Badge ok={busy ? null : true}>{busy ? "busy" : "ready"}</Badge>
@@ -2458,14 +2248,11 @@ ${JSON.stringify(context)}`);
         </div>
       ) : null}
 
-      <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} content={helpContent} />
-
-
 
       <div className="grid">
         <Card title="Resolver">
           <div className="field">
-            {/* label */}<LabelWithHelp text="Primary item id" helpKey="resolver_primary" onHelp={openHelp} />
+            <div className="label">Primary item id</div>
             <input
               className="input mono"
               value={primaryItemId}
@@ -2489,7 +2276,7 @@ ${JSON.stringify(context)}`);
 
 
           <div className="field">
-            {/* label */}<LabelWithHelp text="Optional: Compare item (A vs B)" helpKey="resolver_compare" onHelp={openHelp} />
+            <div className="label">Optional: Compare item (A vs B)</div>
             <input
               className="input mono"
               value={compareItemId}
@@ -2497,65 +2284,54 @@ ${JSON.stringify(context)}`);
               placeholder="e.g. BTC or polygon_tbp_weth_sush"
             />
           </div>
-        
-<div className="field">
-  <LabelWithHelp text="Compare set (select up to 20 from watchlist)" helpKey="resolver_compare_set" onHelp={openHelp} />
-  <div className="chipsRow" style={{ marginTop: 10, flexWrap: "wrap" }}>
-    {(watchlist || []).map((sym) => {
-      const s = String(sym).toUpperCase();
-      const checked = resolverCompareSet.includes(s);
-      return (
-        <label key={s} className="chipCheck" style={{ display: "inline-flex", alignItems: "center", gap: 8 }}>
-          <input
-            type="checkbox"
-            checked={checked}
-            onChange={() => {
-              setResolverCompareSet((prev) => {
-                const has = prev.includes(s);
-                if (has) return prev.filter((x) => x !== s);
-                if (prev.length >= 20) return prev; // hard limit
-                return [...prev, s];
-              });
-            }}
-          />
-          <span className="mono">{s}</span>
-        </label>
-      );
-    })}
-  </div>
 
-  <div className="muted" style={{ marginTop: 10, fontSize: 12, lineHeight: 1.5 }}>
-    Tip: Select coins here to compare them. Choose 7/30/90 days for a clearer decision for the grid.
-  </div>
-
-  <div className="row" style={{ marginTop: 10, gap: 8, flexWrap: "wrap" }}>
-    {[7, 30, 90].map((d) => (
-      <button
-        key={d}
-        className={"modeBtn " + (resolverDays === d ? "active" : "")}
-        onClick={() => setResolverDays(d)}
-      >
-        {d}D
-      </button>
-    ))}
-    {resolverHistLoading ? <span className="muted">Loading…</span> : null}
-    {resolverHistErr ? <span className="muted" style={{ color: "#fca5a5" }}>{resolverHistErr}</span> : null}
-  </div>
-
-  {resolverHist?.series ? (
-    <ResolverChart
-      seriesById={resolverHist.series}
-      ids={Object.keys(resolverHist.series).slice(0, 5)}
-    />
-  ) : null}
-
-  {resolverCompareSet?.length ? (
-    <div className="muted" style={{ marginTop: 10, fontSize: 12 }}>
-      Selected: <span className="mono">{resolverCompareSet.join(", ")}</span>
-    </div>
-  ) : null}
-</div>
-</Card>
+          <div className="field">
+            <div className="label">Compare set (select up to 20 from watchlist)</div>
+            <div className="pillRow" style={{ gap: 8 }}>
+              {(watchlist || []).map((sym) => {
+                const checked = (resolverCompareSet || []).includes(sym);
+                const disabled = !checked && (resolverCompareSet || []).length >= 20;
+                return (
+                  <label
+                    key={sym}
+                    className="pill"
+                    style={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: 8,
+                      opacity: disabled ? 0.55 : 1,
+                      cursor: disabled ? "not-allowed" : "pointer",
+                    }}
+                    title={disabled ? "Max 20 selected" : "Toggle compare"}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={checked}
+                      disabled={disabled}
+                      onChange={() => {
+                        setResolverCompareSet((prev) => {
+                          const arr = Array.isArray(prev) ? [...prev] : [];
+                          const i = arr.indexOf(sym);
+                          if (i >= 0) {
+                            arr.splice(i, 1);
+                            return arr;
+                          }
+                          if (arr.length >= 20) return arr;
+                          arr.push(sym);
+                          return arr;
+                        });
+                      }}
+                    />
+                    <span className="mono">{sym}</span>
+                  </label>
+                );
+              })}
+            </div>
+            <div className="hint muted" style={{ marginTop: 8 }}>
+              Tip: Select coins here, then the resolver/AI can compare them quickly. (Charts over days need a history endpoint.)
+            </div>
+          </div>
+        </Card>
 
         <Card
           title="Live Price (USD)"
@@ -3618,6 +3394,20 @@ ${JSON.stringify(context)}`);
           transition: transform .08s ease, border-color .12s ease, background .12s ease;
         }
         .segBtn{padding:8px 12px;font-size:12px;}
+
+        .smallBtn{
+          border-radius:999px;
+          border:1px solid rgba(97,255,194,.22);
+          background:rgba(8,16,14,.55);
+          color:rgba(230,255,244,.92);
+          padding:8px 12px;
+          cursor:pointer;
+          font-size:12px;
+          line-height:1;
+          transition: transform .08s ease, border-color .12s ease, background .12s ease;
+        }
+        .smallBtn:hover{transform: translateY(-1px); border-color: rgba(97,255,194,.45); background: rgba(8,16,14,.7);}
+
         .btn:hover, .modeBtn:hover, .segBtn:hover{transform: translateY(-1px);border-color:rgba(97,255,194,.35);}
         .btn:disabled, .modeBtn:disabled, .segBtn:disabled{opacity:.55;cursor:not-allowed;transform:none;}
         
