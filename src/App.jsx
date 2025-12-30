@@ -293,7 +293,7 @@ function NexusLogo() {
 /* -------------------------
    App
 --------------------------*/
-export default 
+
 /* =========================
    Help texts (DE/EN) + modal
    ========================= */
@@ -462,7 +462,7 @@ function ResolverChart({ seriesById, ids, height = 220 }) {
   );
 }
 
-function App() {
+export default function App() {
   const DEV_MODE = import.meta?.env?.DEV === true;
   const [deferredPrompt, setDeferredPrompt] = useState(null);
   const [canInstall, setCanInstall] = useState(false);
